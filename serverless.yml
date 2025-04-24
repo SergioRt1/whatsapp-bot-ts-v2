@@ -1,0 +1,49 @@
+service: whatsapp-bot-ts
+frameworkVersion: '3'
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+  region: us-east-2
+  memorySize: 256
+  timeout: 20
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - dynamodb:GetItem
+            - dynamodb:PutItem
+            - dynamodb:DeleteItem
+          Resource:
+            - arn:aws:dynamodb:us-east-2:585330697739:table/whats-app-bot-table
+
+
+plugins:
+  - serverless-plugin-typescript
+  - serverless-dotenv-plugin
+
+functions:
+  cronHandler:
+    handler: src/handler.run
+    events:
+      # Invoke Lambda function every weekday at 10 AM UTC-5
+      - schedule: cron(0 15 ? * MON-FRI *)
+      # Invoke Lambda function every weekday at 5 PM UTC-5
+      - schedule: cron(0 22 ? * MON-FRI *)
+
+resources:
+  Resources:
+    WhatsAppBotTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: whats-app-bot-table
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
