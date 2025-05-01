@@ -45,15 +45,13 @@ export async function startSock() {
         },
         msgRetryCounterCache,
         markOnlineOnConnect: false,            // Don't mark the device as online
-        shouldSyncHistoryMessage: () => false, // Disable history sync to avoid unnecessary fetches
-        fireInitQueries: false,                // Don't send presence or other init queries
-        keepAliveIntervalMs: 0,                // Disable ping-pong to reduce wait time
-        connectTimeoutMs: 15_000,              // Tighten timeout to fail faster
-        defaultQueryTimeoutMs: 10_000,         // Avoid long hangs if something breaks
+        shouldSyncHistoryMessage: () => true,  // Enable history sync to avoid sync issues
+        fireInitQueries: true,                 // Send presence or other init queries
+        keepAliveIntervalMs: 5_000,            // Reduce ping-pong wait time            
         linkPreviewImageThumbnailWidth: 32,    // Lower resource usage
         syncFullHistory: false,                // No sync needed for one-shot
         generateHighQualityLinkPreview: false, // Faster, lighter message send
-        emitOwnEvents: false,                  // Reduce event noise
+        emitOwnEvents: true,                  
     });
 
     // Save credentials when updated

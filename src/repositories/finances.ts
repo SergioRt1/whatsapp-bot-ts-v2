@@ -1,7 +1,6 @@
 import { instance } from '../resources/axios';
 
 const EXCHANGE_RATES_BASE_URL = 'https://api.apilayer.com/exchangerates_data';
-const DEFAULT_TIMEOUT_MS = 10_000;
 
 /**
  * Structure of the API response for exchange rates.
@@ -39,9 +38,7 @@ async function fetchLatestRates(
 ): Promise<ExchangeRates | undefined> {
     const url = buildLatestRatesUrl(base, currencies);
     try {
-        const response = await instance.get<ExchangeRates>(url, {
-            timeout: DEFAULT_TIMEOUT_MS
-        });
+        const response = await instance.get<ExchangeRates>(url);
 
         if (response.status === 200 && response.data.success) {
             return response.data;

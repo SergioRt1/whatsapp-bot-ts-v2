@@ -5,8 +5,8 @@ provider:
   name: aws
   runtime: nodejs20.x
   region: us-east-2
-  memorySize: 256
-  timeout: 20
+  memorySize: 180
+  timeout: 60
   iam:
     role:
       statements:

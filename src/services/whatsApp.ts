@@ -4,6 +4,8 @@ import {
     WASocket,
     GroupMetadata,
     DisconnectReason,
+    WAMessageUpdate,
+    proto,
 } from 'baileys';
 
 /**
@@ -34,28 +36,16 @@ function findGroupByName(
 
 /**
  * Sends a financial update message to the specified WhatsApp group.
- * @param groupName The name (or partial name) of the target group.
+ * @param groupId The jid of the target group.
  * @param socketPromise A promise resolving to an active WhatsApp socket.
  * @returns The result of sendMessage or an error status object.
  */
 export async function sendMessage(
-    groupName: string,
+    groupId: string,
     socketPromise: Promise<WASocket>
 ): Promise<any> {
     const messagePromise = fetchMessagePayload();
     const socket = await socketPromise;
-
-    // Fetch all participating groups
-    const groups = await socket.groupFetchAllParticipating();
-
-    // Find the target group ID and metadata
-    const entry = findGroupByName(groups, groupName);
-    if (!entry) {
-        console.warn(`Group "${groupName}" not found`);
-        return { status: 1, error: 'group_not_found' };
-    }
-
-    const [groupId, meta] = entry;
 
     // Build the message payload
     const payload = await messagePromise;
@@ -65,13 +55,62 @@ export async function sendMessage(
     }
 
     // Send the message and logout
-    console.log(`Sending message to ${meta.subject}:`, payload);
+    console.log(`Sending message to ${groupId}:`, payload);
     const result = await socket.sendMessage(groupId, payload);
+    
+    // Wait for message delivery
+    if (result) {
+        const messageId = result.key.id!;
+        try {
+            console.log('⏳ Waiting for message delivery ACK');
+            const finalStatus = await waitForMessageSend(socket, messageId);
+            console.log(`✅ Message delivered with status ${finalStatus}`);
+        } catch (err: any) {
+            console.warn('❌ Timed out waiting for delivery:', err.message);
+        }
+    }
 
     await waitForBufferedEvents(socket);
-    socket.end(new Boom('Intentional Logout', { statusCode: DisconnectReason.loggedOut }));
+    socket.end(new Boom('Intentional End', { statusCode: DisconnectReason.loggedOut }));
 
     return result;
+}
+
+/**
+ * Waits for “messages.update” event where status ≥ 2 (SERVER_ACK).
+ * @param sock The WASocket instance 
+ * @param messageId The string ID from result.key.id
+ * @param timeoutMs How long to wait (ms) before bailing out
+ */
+async function waitForMessageSend(
+    sock: WASocket,
+    messageId: string,
+    timeoutMs = 20_000
+  ): Promise<number> {
+    return new Promise((resolve, reject) => {
+        let timer: NodeJS.Timeout;
+  
+        // define the update handler
+        const onUpdate = async (updates: WAMessageUpdate[]) => {
+            for (const upd of updates) {
+                const id = upd.key?.id;
+                const status = upd.update?.status;
+                if (id === messageId && status && status >= proto.WebMessageInfo.Status.SERVER_ACK) {
+                    clearTimeout(timer);
+                    sock.ev.off('messages.update', onUpdate);
+                    resolve(status);
+                    return;
+                }
+            }
+        };
+  
+        sock.ev.on('messages.update', onUpdate);
+    
+        timer = setTimeout(() => {
+            sock.ev.off('messages.update', onUpdate);
+            reject(new Error('Timed out waiting for message delivery update'));
+        }, timeoutMs);
+    });
 }
 
 /**
@@ -80,14 +119,16 @@ export async function sendMessage(
  *
  * @param sock The active WASocket instance.
  * @param interval The interval in milliseconds between flush checks. Default is 100ms.
- * @param timeout The maximum time to wait before giving up (in milliseconds). Default is 3000ms.
+ * @param timeout The maximum time to wait before giving up (in milliseconds).
  */
-async function waitForBufferedEvents(sock: WASocket, interval = 100, timeout = 3000) {
+async function waitForBufferedEvents(sock: WASocket, interval = 100, timeout = 15000) {
     const start = Date.now();
     while (!sock.ev.flush()) {
         if (Date.now() - start > timeout) {
+            console.log('Timeout while waiting for events, ending anyways 🤔');
             return;
         }
         await new Promise((res) => setTimeout(res, interval));
     }
+    console.log('All events flushed; safe to disconnect. 👋');
 }
