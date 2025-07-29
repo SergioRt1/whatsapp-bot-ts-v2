@@ -7,7 +7,7 @@
     "@aws-sdk/client-dynamodb": "^3.788.0",
     "@aws-sdk/lib-dynamodb": "^3.789.0",
     "axios": "^1.8.4",
-    "baileys": "^6.7.16",
+    "baileys": "^6.7.18",
     "dotenv": "^16.5.0",
     "node-cache": "^5.1.2",
     "qrcode-terminal": "^0.12.0",
