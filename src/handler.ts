@@ -19,3 +19,5 @@ export const run = async (_event, context) => {
       console.error('Error in run():', err)
     }
 }
+
+//run(null, null); //Local debug

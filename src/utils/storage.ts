@@ -33,3 +33,9 @@ export async function saveAsJSON(id: string, payload: unknown): Promise<void> {
 export async function removeById(id: string): Promise<void> {
     await deleteDocument(id);
 }
+
+export async function getJSON<T>(id: string): Promise<T | null> {
+  const raw = await getDocument(id);
+  if (!raw) return null;
+  try { return JSON.parse(raw) as T; } catch { return null; }
+}

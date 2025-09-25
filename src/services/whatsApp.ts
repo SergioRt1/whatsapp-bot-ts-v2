@@ -125,7 +125,7 @@ async function waitForBufferedEvents(sock: WASocket, interval = 100, timeout = 1
     const start = Date.now();
     while (!sock.ev.flush()) {
         if (Date.now() - start > timeout) {
-            console.log('Timeout while waiting for events, ending anyways 🤔');
+            console.warn('Timeout while waiting for events, ending anyways 🤔');
             return;
         }
         await new Promise((res) => setTimeout(res, interval));
