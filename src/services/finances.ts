@@ -13,6 +13,7 @@ type Conversion = {
   base: string;               // "USD"
   quote: string;              // "COP"
   compute: (rates: Record<string, number>) => number | undefined; // return rate for base->quote
+  sell: boolean;
 };
 
 /** 
@@ -31,9 +32,9 @@ function computeFromUsd(base: string, quote: string) {
 }
 
 const PAIRS: Conversion[] = [
-  { id: 'USD->COP', base: 'USD', quote: 'COP', compute: computeFromUsd('USD', 'COP') },
-  { id: 'USD->MXN', base: 'USD', quote: 'MXN', compute: computeFromUsd('USD', 'MXN') },
-  { id: 'EUR->COP', base: 'EUR', quote: 'COP', compute: computeFromUsd('EUR', 'COP') },
+  { id: 'USD->COP', base: 'USD', quote: 'COP', compute: computeFromUsd('USD', 'COP'), sell: true },
+  { id: 'USD->MXN', base: 'USD', quote: 'MXN', compute: computeFromUsd('USD', 'MXN'), sell: true },
+  { id: 'EUR->COP', base: 'EUR', quote: 'COP', compute: computeFromUsd('EUR', 'COP'), sell: false },
 ];
 
 /**
@@ -79,9 +80,9 @@ function formatLine(pair: Conversion, current: number, score: Favorability, prev
   const delta = previous !== undefined ? current - previous : undefined;
   const deltaStr = delta === undefined ? '' : `(${sign(delta)}${delta.toFixed(2)})`;
   const zStr = `${sign(score.zscore)}${score.zscore.toFixed(2)}σ ${trendGlyph(score.trend)}`;
+  const scoreStr = pair.sell ? `SELL ${score.sellerScore}% ${score.sellerLabel}` : `BUY ${score.buyerScore}% ${score.buyerLabel}`;
 
-  // Compacto: "<BASE>→<QUOTE> <rate> (±Δ) SELL xx% z"
-  return `${pair.base}→${pair.quote} *${current.toFixed(2)}* ${deltaStr} · SELL ${score.sellerScore}% ${score.sellerLabel} · ${zStr}`;
+  return `${pair.base}→${pair.quote} *${current.toFixed(2)}* ${deltaStr} · ${scoreStr} · ${zStr}`;
 }
 
 /**

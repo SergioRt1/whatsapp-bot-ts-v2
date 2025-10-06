@@ -41,11 +41,12 @@ function percentileRank(window: number[], value: number): number {
 }
 
 function label(score: number): string {
+  if (score >= 95) return '🥵';
   if (score >= 70) return '💸';
   if (score >= 55) return '🙂';
   if (score > 45)  return '😐';
   if (score > 30)  return '😢';
-  return '🤬';
+  return '😭';
 }
 
 export function scoreFavorability(series: number[]): Favorability {
