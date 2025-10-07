@@ -18,7 +18,6 @@ provider:
           Resource:
             - arn:aws:dynamodb:us-east-2:585330697739:table/whats-app-bot-table
 
-
 plugins:
   - serverless-plugin-typescript
   - serverless-dotenv-plugin
@@ -31,6 +30,12 @@ functions:
       - schedule: cron(0 15 ? * MON-FRI *)
       # Invoke Lambda function every weekday at 5 PM UTC-5
       - schedule: cron(0 22 ? * MON-FRI *)
+  api:
+    handler: src/handler.http
+    events:
+      - httpApi:
+          path: /send
+          method: POST
 
 resources:
   Resources:

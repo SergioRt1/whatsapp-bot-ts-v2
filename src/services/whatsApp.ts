@@ -35,45 +35,57 @@ function findGroupByName(
 }
 
 /**
+ * Sends a general message to the specified WhatsApp group.
+ * @param groupId The jid of the target group.
+ * @param socketPromise A promise resolving to an active WhatsApp socket.
+ * @param text The text message to send.
+ * @returns The result of sendMessage or an error status object.
+ */
+export async function sendTextMessage(
+  groupId: string,
+  socketPromise: Promise<WASocket>,
+  text: string
+): Promise<any> {
+  if (!text?.trim()) return { status: 1, error: 'empty_text' };
+
+  const socket = await socketPromise;
+  const payload = { text };
+
+  console.log(`Sending message to ${groupId}:`, payload);
+  const result = await socket.sendMessage(groupId, payload);
+
+  if (result) {
+    const messageId = result.key.id!;
+    try {
+      console.log('⏳ Waiting for message delivery ACK');
+      const finalStatus = await waitForMessageSend(socket, messageId);
+      console.log(`✅ Message delivered with status ${finalStatus}`);
+    } catch (err: any) {
+      console.warn('❌ Timed out waiting for delivery:', err.message);
+    }
+  }
+
+  await waitForBufferedEvents(socket);
+  socket.end(new Boom('Intentional End', { statusCode: DisconnectReason.loggedOut }));
+  return result;
+}
+
+/**
  * Sends a financial update message to the specified WhatsApp group.
  * @param groupId The jid of the target group.
  * @param socketPromise A promise resolving to an active WhatsApp socket.
  * @returns The result of sendMessage or an error status object.
  */
-export async function sendMessage(
-    groupId: string,
-    socketPromise: Promise<WASocket>
+export async function sendFinancialMessage(
+  groupTarget: string,
+  socketPromise: Promise<WASocket>
 ): Promise<any> {
-    const messagePromise = fetchMessagePayload();
-    const socket = await socketPromise;
-
-    // Build the message payload
-    const payload = await messagePromise;
-    if (!payload) {
-        console.warn('No financial message to send');
-        return { status: 1, error: 'no_message' };
-    }
-
-    // Send the message and logout
-    console.log(`Sending message to ${groupId}:`, payload);
-    const result = await socket.sendMessage(groupId, payload);
-    
-    // Wait for message delivery
-    if (result) {
-        const messageId = result.key.id!;
-        try {
-            console.log('⏳ Waiting for message delivery ACK');
-            const finalStatus = await waitForMessageSend(socket, messageId);
-            console.log(`✅ Message delivered with status ${finalStatus}`);
-        } catch (err: any) {
-            console.warn('❌ Timed out waiting for delivery:', err.message);
-        }
-    }
-
-    await waitForBufferedEvents(socket);
-    socket.end(new Boom('Intentional End', { statusCode: DisconnectReason.loggedOut }));
-
-    return result;
+  const info = await getFinancialInfo();
+  if (!info) {
+    console.warn('No financial message to send');
+    return { status: 1, error: 'no_message' };
+  }
+  return sendTextMessage(groupTarget, socketPromise, info);
 }
 
 /**
